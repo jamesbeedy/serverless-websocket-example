@@ -1,23 +1,25 @@
 service: websocket-example
 
 plugins:
+  - serverless-stack-output
   - serverless-plugin-common-excludes
   - serverless-plugin-include-dependencies
-  - '@anttiviljami/serverless-stack-output'
 
 custom:
   output:
     file: ./client/data.json
-  stage: ${opt:stage, 'dev'}
 
 provider:
   name: aws
+  region: us-west-2
+
+  stage: ${opt:stage, 'dev'}
 
   # If you use a lower runtime (e.g. nodejs8.10), you have to bundle your own
   # 'aws-sdk', as ApiGatewayManagementApi was not introduced until
   # aws-sdk@2.379.0. See https://github.com/aws/aws-sdk-js/issues/2520#issuecomment-476723105
   # for details.
-  runtime: nodejs10.x
+  runtime: nodejs12.x
 
   environment:
     APIG_ENDPOINT:
@@ -27,7 +29,7 @@ provider:
           - .execute-api.
           - Ref: AWS::Region
           - .amazonaws.com/
-          - ${self:custom.stage}
+          - ${self:provider.stage}
     CONNECTIONS_TABLE:
       Ref: ConnectionsTable
 
