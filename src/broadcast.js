@@ -40,7 +40,7 @@ exports.handler = async function(event, context) {
   // You should not log any sensitive information in production.
   console.log("EVENT: \n" + JSON.stringify(event, null, 2));
 
-  const { body } = event;
+  const body = JSON.stringify(event, null, 2);
   const connections = await getAllConnections();
   await Promise.all(
     connections.map(connectionId => sendMessage(connectionId, body))

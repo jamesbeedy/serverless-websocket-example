@@ -1,27 +1,51 @@
-const AWS = require('aws-sdk');
-const apig = new AWS.ApiGatewayManagementApi({
-  endpoint: process.env.APIG_ENDPOINT
-});
-const dynamodb = new AWS.DynamoDB.DocumentClient();
-
-const connectionTable = process.env.CONNECTIONS_TABLE;
+#!/usr/bin/python3
+import os
 
 
-async function sendMessage(connectionId, body) {
-  try {
-    await apig.postToConnection({
-      ConnectionId: connectionId,
-      Data: body
-    }).promise();
-  } catch (err) {
-    // Ignore if connection no longer exists
-    if(err.statusCode !== 400 && err.statusCode !== 410) {
-      throw err;
-    }
-  }
-}
+from boto3 import client
+from boto3.ApiGatewayManagementApi.Client.exceptions import (
+    GoneException,
+    LimitExceededException,
+    PayloadTooLargeException,
+    ForbiddenException,
+)
+
+
+CONNECTION_TABLE = os.environ['CONNECTIONS_TABLE'];
+
+APIGW = boto3.client('apigatewaymanagementapi')
+DYNAMODB = boto3.client('dynamodb')
+
+
+def send_message(connection_id, body):
+    try:
+        apigw.post_to_connection({
+            'ConnectionId': connectionId,
+            'Data': body
+        })
+    except (GoneException,
+            LimitExceededException,
+            PayloadTooLargeException,
+            ForbiddenException) as e:
+        print(e)
+
+def get_all_connections(exclusive_start_key=None):
+
+    db_scan = DYNAMODB.scan(
+        TableName=CONNECTION_TABLE,
+        IndexName='string',
+        AttributesToGet=[
+            'connectionId',
+        ],
+    )
+    items = db_scan['Items']
+    last_evaluated_key = db_scan['LastEvaluatedKey']
+
+
 
 async function getAllConnections(ExclusiveStartKey) {
+
+
   const { Items, LastEvaluatedKey } = await dynamodb.scan({
     TableName: connectionTable,
     AttributesToGet: [ 'connectionId' ],
@@ -29,15 +53,12 @@ async function getAllConnections(ExclusiveStartKey) {
   }).promise();
 
   const connections = Items.map(({ connectionId }) => connectionId);
-  if(LastEvaluatedKey) {
-    connections.push(...await getAllConnections(LastEvaluatedKey));
+  if(LastEvaluatedKey && (currentConnectionId != connectionId)) {
+    connections.push(...await getAllConnections(currentConnectionId, LastEvaluatedKey));
   }
-  console.log("******* [CONNECTIONS] ****** ", connections); 
 
   return connections;
 }
-
-
 
 exports.handler = async function(event, context) {
   // For debug purposes only.
@@ -66,11 +87,9 @@ exports.handler = async function(event, context) {
       break;
 
     case 'routeA':
-      const connections = await getAllConnections();
-      const conn = connections.filter(item => item !== connectionId)
-
+      const connections = await getAllConnections(connectionId, null);
       await Promise.all(
-        conn.map(connectionId => sendMessage(connectionId, body))
+        connections.map(connectionId => sendMessage(connectionId, body))
       );
       break;
 

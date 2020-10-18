@@ -49,17 +49,8 @@
           };
         },
         send() {
-          this.messages.push('client:    Sending a message.');
-
           this.websocket.send(
-            // This message will be routed to 'routeA' based on the 'action'
-            // property
-            JSON.stringify({ action: 'routeA', data: 'Hello from client.' })
-          );
-          this.websocket.send(
-            // This message will be routed to the '$default' route as 'routeB'
-            // has not been defined
-            JSON.stringify({ action: 'routeB', data: 'Hello from client.' })
+            JSON.stringify({ action: "routeA", data: 'Hello from client.' })
           );
         },
         disconnect() {
